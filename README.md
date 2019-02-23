@@ -1,1 +1,1 @@
-# Maximizing-Marginal-Utility-per-Dollar-forEconomic-Recommendation
+# Maximizing-Marginal-Utility-per-Dollar-for-Economic-Recommendation
