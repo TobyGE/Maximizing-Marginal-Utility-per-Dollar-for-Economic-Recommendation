@@ -101,17 +101,17 @@ class TransactionData(Dataset):
 
 class UserTransactionData(Dataset):
 	"""docstring for UserTransactionData"""
-	def __init__(self, transaction, item_price, itemNum, trainHist):
+	def __init__(self, transactions, item_price, itemNum, trainHist):
 		super(UserTransactionData, self).__init__()
-		self.transaction = transaction
-		self.L = len(transaction)
-		self.userNum = np.unique(np.array(transctions)[:,0])
-		self.user = [i for i in range(self.userNum)]
+		self.transactions = transactions
+		self.user = np.unique(np.array(transactions)[:,0])
+		self.L = len(self.user)
+		self.userNum = self.L
 		self.itemNum = itemNum
 		self.negNum = 1000
 		self.userHist = [[] for i in range(self.userNum)]
 		self.trainHist = trainHist
-		for row in transctions:
+		for row in transactions:
 			self.userHist[row[0]].append(row[1])
 
 	def __len__(self):
