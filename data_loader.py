@@ -73,8 +73,8 @@ class TransactionData(Dataset):
 		negItem = self.get_neg(user, item)
 		return {"user": torch.tensor(user).to(torch.long), \
 				"item": torch.tensor(item).to(torch.long), \
-				"price": torch.tensor(price).to(torch.long), \
-				"rating": torch.tensor(rating).to(torch.long), \
+				"price": torch.tensor(price).to(torch.float), \
+				"rating": torch.tensor(rating).to(torch.float), \
 				"negItem": torch.tensor(negItem).to(torch.long)}
 
 	def get_neg(self, userid, itemid):
@@ -101,7 +101,7 @@ class TransactionData(Dataset):
 
 class UserTransactionData(Dataset):
 	"""docstring for UserTransactionData"""
-	def __init__(self, transaction, item_price, itemNum):
+	def __init__(self, transaction, item_price, itemNum, trainHist):
 		super(UserTransactionData, self).__init__()
 		self.transaction = transaction
 		self.L = len(transaction)
@@ -110,6 +110,7 @@ class UserTransactionData(Dataset):
 		self.itemNum = itemNum
 		self.negNum = 1000
 		self.userHist = [[] for i in range(self.userNum)]
+		self.trainHist = trainHist
 		for row in transctions:
 			self.userHist[row[0]].append(row[1])
 
@@ -119,13 +120,21 @@ class UserTransactionData(Dataset):
 	def __getitem__(self, idx):
 		user = self.user[idx]
 		posItem = self.userHist[idx]
+		posPrice = []
+		for i in posItem:
+			posPrice.append(self.item_price[i])
+		negPrice = []
 		negItem = self.get_neg(idx)
+		for i in negItem:
+			negPrice.append(self.item_price[i])
 		return {"user": torch.tensor(user).to(torch.long), \
 				"posItem": torch.tensor(posItem).to(torch.long), \
+				"posPrice": torch.tensor(posPrice).to(torch.float), \
+				"negPrice": torch.tensor(negPrice).to(torch.float), \
 				"negItem": torch.tensor(negItem).to(torch.long)}
 
 	def get_neg(self, userId):
-		hist = self.userHist(userId)
+		hist = self.userHist[userId] + self.trainHist[userId]
 		neg = []
 		for i in range(self.negNum):
 			while True:
@@ -142,7 +151,7 @@ class UserTransactionData(Dataset):
 		
 
 if __name__ == '__main__':
-	train_data, val_data, test_data = read_data("Baby")
+	# train_data, val_data, test_data = read_data("Baby")
 	# related = read_related("Baby")
 	# TrainTransaction = TransactionData(train_data, related)
 	# print(TrainTransaction[0])
