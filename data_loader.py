@@ -6,7 +6,7 @@ import random
 import torch.nn as nn
 
 def read_data(category):
-	address = "./FinalData/" + category + "/" + category + "_"
+	address = "./data/" + category + "/" + category + "_"
 	with open(address + "TrainSamples.txt","r") as f:
 		data = f.readlines()
 	TrainSamples = []
@@ -15,7 +15,7 @@ def read_data(category):
 		sample = [int(i) for i in row]
 		TrainSamples.append(sample)
 
-	with open(address + "ValidationList.txt","r") as f:
+	with open(address + "ValidationSamples.txt","r") as f:
 		data = f.readlines()
 	ValSamples = []
 	for line in data:
@@ -23,7 +23,7 @@ def read_data(category):
 		sample = [int(i) for i in row]
 		ValSamples.append(sample)
 
-	with open(address + "TestList.txt","r") as f:
+	with open(address + "TestSamples.txt","r") as f:
 		data = f.readlines()
 	TestSamples = []
 	for line in data:
@@ -33,15 +33,20 @@ def read_data(category):
 
 	return TrainSamples, ValSamples, TestSamples
 
+def get_price(category):
+	address = "./data/" + category + "/" + category + "_" + "item_price.npy"
+	price = np.load(address)
+	return price
+
 def read_related(category):
-	address = "./FinalData/" + category + "/" + category + "_"
+	address = "./data/" + category + "/" + category + "_"
 	with open(address + "related_index.json","r") as f:
 		related = json.load(f)
 	return related
 
 class TransactionData(Dataset):
 	"""docstring for TransactionData"""
-	def __init__(self, transctions, related):
+	def __init__(self, transctions, related, item_price):
 		super(TransactionData, self).__init__()
 		self.transctions = transctions
 		self.related = related
@@ -50,6 +55,7 @@ class TransactionData(Dataset):
 		self.userNum = len(self.users)
 		self.itemNum = len(related)
 		self.negNum = 2
+		self.item_price = item_price
 		self.userHist = [[] for i in range(self.userNum)]
 		for row in transctions:
 			self.userHist[row[0]].append(row[1])
@@ -63,9 +69,11 @@ class TransactionData(Dataset):
 		user = row[0]
 		item = row[1]
 		rating = row[2]
+		price = self.item_price[item]
 		negItem = self.get_neg(user, item)
 		return {"user": torch.tensor(user).to(torch.long), \
 				"item": torch.tensor(item).to(torch.long), \
+				"price": torch.tensor(price).to(torch.long), \
 				"rating": torch.tensor(rating).to(torch.long), \
 				"negItem": torch.tensor(negItem).to(torch.long)}
 
@@ -93,32 +101,52 @@ class TransactionData(Dataset):
 
 class UserTransactionData(Dataset):
 	"""docstring for UserTransactionData"""
-	def __init__(self, transaction):
+	def __init__(self, transaction, item_price, itemNum):
 		super(UserTransactionData, self).__init__()
 		self.transaction = transaction
 		self.L = len(transaction)
-		self.userNum = len(transaction)
+		self.userNum = np.unique(np.array(transctions)[:,0])
 		self.user = [i for i in range(self.userNum)]
+		self.itemNum = itemNum
 		self.negNum = 1000
+		self.userHist = [[] for i in range(self.userNum)]
+		for row in transctions:
+			self.userHist[row[0]].append(row[1])
 
 	def __len__(self):
 		return self.L
 
 	def __getitem__(self, idx):
-		row = self.transaction[idx]
 		user = self.user[idx]
-		negItem = row[:self.negNum]
-		item = row[self.negNum:]
+		posItem = self.userHist[idx]
+		negItem = self.get_neg(idx)
 		return {"user": torch.tensor(user).to(torch.long), \
-				"item": torch.tensor(item).to(torch.long), \
+				"posItem": torch.tensor(posItem).to(torch.long), \
 				"negItem": torch.tensor(negItem).to(torch.long)}
+
+	def get_neg(self, userId):
+		hist = self.userHist(userId)
+		neg = []
+		for i in range(self.negNum):
+			while True:
+				negId = np.random.randint(self.itemNum)
+				if negId not in hist and negId not in neg:
+					neg.append(negId)
+					break
+		return neg
+		
+	def set_negN(self, n):
+		if n < 1: 
+			return
+		self.negNum = n
 		
 
 if __name__ == '__main__':
-	train_data, val_data, test_data = read_data("Baby")
-	related = read_related("Baby")
-	TrainTransaction = TransactionData(train_data, related)
-	print(TrainTransaction[0])
-	TestTransaction = UserTransactionData(test_data)
-	print(TestTransaction[0])
+	# train_data, val_data, test_data = read_data("Baby")
+	# related = read_related("Baby")
+	# TrainTransaction = TransactionData(train_data, related)
+	# print(TrainTransaction[0])
+	# TestTransaction = UserTransactionData(test_data)
+	# print(TestTransaction[0])
+	print(nn.Embedding(2,3)(torch.tensor(1)))
 
