@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import json
 import random
+import torch.nn as nn
 
 def read_data(category):
 	address = "./FinalData/" + category + "/" + category + "_"
