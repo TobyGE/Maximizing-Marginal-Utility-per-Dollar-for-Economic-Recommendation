@@ -150,7 +150,7 @@ class UserTransactionData(Dataset):
 		self.negNum = n
 		
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 	# train_data, val_data, test_data = read_data("Baby")
 	# related = read_related("Baby")
 	# TrainTransaction = TransactionData(train_data, related)
