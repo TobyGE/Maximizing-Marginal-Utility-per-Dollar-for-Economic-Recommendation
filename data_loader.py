@@ -19,7 +19,7 @@ def read_data(category):
 		data = f.readlines()
 	ValSamples = []
 	for line in data:
-		row = line[1:-2].split(",")
+		row = line[:-1].split(",")
 		sample = [int(i) for i in row]
 		ValSamples.append(sample)
 
@@ -27,7 +27,7 @@ def read_data(category):
 		data = f.readlines()
 	TestSamples = []
 	for line in data:
-		row = line[1:-2].split(",")
+		row = line[:-1].split(",")
 		sample = [int(i) for i in row]
 		TestSamples.append(sample)
 
@@ -134,7 +134,7 @@ class UserTransactionData(Dataset):
 					neg.append(negId)
 					break
 		return neg
-		
+
 	def set_negN(self, n):
 		if n < 1: 
 			return
@@ -142,11 +142,11 @@ class UserTransactionData(Dataset):
 		
 
 if __name__ == '__main__':
-	# train_data, val_data, test_data = read_data("Baby")
+	train_data, val_data, test_data = read_data("Baby")
 	# related = read_related("Baby")
 	# TrainTransaction = TransactionData(train_data, related)
 	# print(TrainTransaction[0])
 	# TestTransaction = UserTransactionData(test_data)
 	# print(TestTransaction[0])
-	print(nn.Embedding(2,3)(torch.tensor(1)))
+	# print(nn.Embedding(2,3)(torch.tensor(1)))
 
