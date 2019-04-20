@@ -44,9 +44,14 @@ def read_related(category):
 		related = json.load(f)
 	return related
 
+def get_distribution(category):
+	address = "./data/" + category + "/" + category + "_" + "ItemResult.npy"
+	distribution = np.load(address)
+	return distribution
+
 class TransactionData(Dataset):
 	"""docstring for TransactionData"""
-	def __init__(self, transctions, related, item_price):
+	def __init__(self, transctions, related, item_price, rating_distribution):
 		super(TransactionData, self).__init__()
 		self.transctions = transctions
 		self.related = related
@@ -56,6 +61,7 @@ class TransactionData(Dataset):
 		self.itemNum = len(related)
 		self.negNum = 2
 		self.item_price = item_price
+		self.rating_distribution = rating_distribution
 		self.userHist = [[] for i in range(self.userNum)]
 		for row in transctions:
 			self.userHist[row[0]].append(row[1])
@@ -72,10 +78,12 @@ class TransactionData(Dataset):
 		price = self.item_price[item]
 		negItem = self.get_neg(user, item)
 		negPrice = []
+		distribution = self.rating_distribution[item]
 		for i in negItem:
 			negPrice.append(self.item_price[i])
 		return {"user": torch.tensor(user).to(torch.long), \
 				"item": torch.tensor(item).to(torch.long), \
+				"r_distribution": torch.tensor(distribution).to(torch.float), \
 				"price": torch.tensor(price).to(torch.float), \
 				"rating": torch.tensor(rating).to(torch.float), \
 				"negItem": torch.tensor(negItem).to(torch.long), \
