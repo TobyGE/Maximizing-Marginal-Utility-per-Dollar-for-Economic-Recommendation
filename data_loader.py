@@ -166,7 +166,7 @@ class UserTransactionData(Dataset):
 
     def get_budget(self, userId):
         price = []
-        for i in self.trainHist[userIf]:
+        for i in self.trainHist[userId]:
             price = self.item_price[i]
         budget = np.max(np.array(price))
         return budget
