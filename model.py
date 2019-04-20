@@ -83,7 +83,7 @@ class MUD(nn.Module):
         uB = self.uBias(users)
         iE = self.itemEmbed(items)
         iB = self.itemBias(items)
-        print("size")
+#         print("size")
         
         # print(uE.shape)
         # print(uB.shape)
@@ -94,21 +94,21 @@ class MUD(nn.Module):
             alpha = gB + uB + iB + torch.mul(uE, iE).sum(2)
         except:
             gB = self.gBias.weight.data.expand(users.shape[0],1)
-            print(torch.mul(uE,iE).sum(1).shape)
+#             print(torch.mul(uE,iE).sum(1).shape)
             alpha = gB + uB + iB + torch.mul(uE, iE).sum(1).view(-1,1)
         with torch.no_grad():
             r = self.rating.forward(users, items)
             tanh_r = torch.tanh(r).view(-1,1)
         price = self.price[items]
-        print(gB.shape)
-        print("alpha")
-        print(alpha.shape)
-        print(price.shape)
+#         print(gB.shape)
+#         print("alpha")
+#         print(alpha.shape)
+#         print(price.shape)
         u = torch.mul(alpha, tanh_r)
-        print(u.shape)
-        out = 0.5 * torch.div(u, torch.sigmoid(price))
-        print("out")
-        print(out.shape)
+#         print(u.shape)
+        out = 0.5 * torch.div(u.view(-1), torch.sigmoid(price))
+#         print("out")
+#         print(out.shape)
         return out
 
     def EU(self, users, items):
