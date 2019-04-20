@@ -120,9 +120,9 @@ class MUD(nn.Module):
         
         alpha = gB + uB + iB + torch.mul(uE, iE).sum(1).view(-1,1).expand(users.shape[0],5)
         distribution = self.distribution[items]
-        rating = torch.tensor([1,2,3,4,5]).expand(users.shape[0],5)
+        rating = torch.tensor([1,2,3,4,5]).expand(users.shape[0],5).to(torch.float)
         tanh_r = torch.tanh(rating)
-        U = torch.log(2) * torch.mul(alpha, tanh_r)
+        U = torch.log(torch.tensor(2).to(torch.float)) * torch.mul(alpha, tanh_r)
         EU = torch.mul(distribution, U).sum(1)
         return EU
 
@@ -135,10 +135,10 @@ class MUD(nn.Module):
         
         alpha = gB + uB + iB + torch.mul(uE, iE).sum(1).view(-1,1)
         distribution = self.distribution[items]
-        rating = torch.tensor([1,2,3,4,5]).expand(users.shape[0],5)
+        rating = torch.tensor([1,2,3,4,5]).expand(users.shape[0],5).to(torch.float)
         r_bar = torch.mul(distribution, rating).sum(1)
         tanh_r_bar = torch.tanh(r_bar)
-        UE = torch.log(2) * torch.mul(alpha, tanh_r_bar)
+        UE = torch.log(torch.tensor(2).to(torch.float)) * torch.mul(alpha, tanh_r_bar)
         return UE
 
         
