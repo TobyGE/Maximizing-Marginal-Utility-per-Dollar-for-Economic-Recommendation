@@ -71,11 +71,15 @@ class TransactionData(Dataset):
 		rating = row[2]
 		price = self.item_price[item]
 		negItem = self.get_neg(user, item)
+		negPrice = []
+		for i in negItem:
+			negPrice.append(self.item_price[i])
 		return {"user": torch.tensor(user).to(torch.long), \
 				"item": torch.tensor(item).to(torch.long), \
 				"price": torch.tensor(price).to(torch.float), \
 				"rating": torch.tensor(rating).to(torch.float), \
-				"negItem": torch.tensor(negItem).to(torch.long)}
+				"negItem": torch.tensor(negItem).to(torch.long), \
+				"negPrice": torch.tensor(negPrice).to(torch.float)}
 
 	def get_neg(self, userid, itemid):
 		neg = self.related[str(itemid)]
@@ -127,7 +131,9 @@ class UserTransactionData(Dataset):
 		negItem = self.get_neg(idx)
 		for i in negItem:
 			negPrice.append(self.item_price[i])
+		budget = self.get_budget(idx)
 		return {"user": torch.tensor(user).to(torch.long), \
+				"budget": torch.tensor(budget).to(torch.float), \
 				"posItem": torch.tensor(posItem).to(torch.long), \
 				"posPrice": torch.tensor(posPrice).to(torch.float), \
 				"negPrice": torch.tensor(negPrice).to(torch.float), \
@@ -148,6 +154,13 @@ class UserTransactionData(Dataset):
 		if n < 1: 
 			return
 		self.negNum = n
+
+	def get_budget(self, userId):
+		price = []
+		for i in self.trainHist[userIf]:
+			price = self.item_price[i]
+		budget = np.max(np.array(price))
+		return budget
 		
 
 # if __name__ == '__main__':
