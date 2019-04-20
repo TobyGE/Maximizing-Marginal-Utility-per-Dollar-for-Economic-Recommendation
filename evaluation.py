@@ -1,7 +1,9 @@
 import numpy as np
 from heapq import heappush, heappop
 
-def ranking_performance(result):
+DEBUG = False
+
+def ranking_performance(score_dict,k):
     """
     Input:
     - score_dict: dictionary of (user: (scores, #ground_truth)); 
@@ -55,3 +57,7 @@ def ranking_performance(result):
     print("\tRecall@: {1:" + str(avgRecall[0]) + "; 5: " + str(avgRecall[4]) + "; 10: " + str(avgRecall[9]) + "}")
     print("\tNDCG@: {1:" + str(avgNDCG[0]) + "; 5: " + str(avgNDCG[4]) + "; 10: " + str(avgNDCG[9]) + "}")
     return {"avg_precision": avgPrec, "avg_recall": avgRecall, "avg_ndcg": avgNDCG}
+
+
+
+
