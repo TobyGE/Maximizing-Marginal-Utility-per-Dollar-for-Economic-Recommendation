@@ -199,41 +199,41 @@ def main(category):
         if improvement < epsilon:
             break
 
-        # test
-        print("starting test...")
-        L = len(testLoader.dataset)
-        pbar = tqdm(total = L)
-        with torch.no_grad():
-            scoreDict = dict()
-            for i, batchData in enumerate(testLoader):
-                user = torch.LongTensor(batchData['user']).to(model.device)
-                posItems = torch.LongTensor(batchData['posItem']).to(model.device)
-                negItems = torch.LongTensor(batchData['negItem']).to(model.device)
-                budget = torch.FloatTensor(batchData['budget']).to(model.device)
-                posPrices = torch.FloatTensor(batchData['posPrice']).to(model.device)
-                negPrices = torch.FloatTensor(batchData['negPrice']).to(model.device)
+    # test
+    print("starting test...")
+    L = len(testLoader.dataset)
+    pbar = tqdm(total = L)
+    with torch.no_grad():
+        scoreDict = dict()
+        for i, batchData in enumerate(testLoader):
+            user = torch.LongTensor(batchData['user']).to(model.device)
+            posItems = torch.LongTensor(batchData['posItem']).to(model.device)
+            negItems = torch.LongTensor(batchData['negItem']).to(model.device)
+            budget = torch.FloatTensor(batchData['budget']).to(model.device)
+            posPrices = torch.FloatTensor(batchData['posPrice']).to(model.device)
+            negPrices = torch.FloatTensor(batchData['negPrice']).to(model.device)
 
-                items = torch.cat((posItems, negItems),1).view(-1)
-                prices = torch.cat((posPrices, negPrices),1).view(-1)
-                users = user.expand(items.shape[0])
+            items = torch.cat((posItems, negItems),1).view(-1)
+            prices = torch.cat((posPrices, negPrices),1).view(-1)
+            users = user.expand(items.shape[0])
 
-                out = model.forward(users,items)
-                scoreHeap = list()
-                for j in range(out.shape[0]):
-                    gt = False
-                    if j < posItems.shape[1]:
-                        gt = True
-                    if prices[j] > budget:
-                        continue
-                    heappush(scoreHeap, (1 - out[j].cpu().numpy(), (0 + items[j].cpu().numpy(), gt)))
-                scores = list()
-                candidate = len(scoreHeap)
-                for k in range(candidate):
-                    scores.append(heappop(scoreHeap))
-                pbar.update(1)
-                scoreDict[user[0]] = (scores, posItems.shape[1])
-        pbar.close()
-        testResult = evaluation.ranking_performance(scoreDict,100)
+            out = model.forward(users,items)
+            scoreHeap = list()
+            for j in range(out.shape[0]):
+                gt = False
+                if j < posItems.shape[1]:
+                    gt = True
+                if prices[j] > budget:
+                    continue
+                heappush(scoreHeap, (1 - out[j].cpu().numpy(), (0 + items[j].cpu().numpy(), gt)))
+            scores = list()
+            candidate = len(scoreHeap)
+            for k in range(candidate):
+                scores.append(heappop(scoreHeap))
+            pbar.update(1)
+            scoreDict[user[0]] = (scores, posItems.shape[1])
+    pbar.close()
+    testResult = evaluation.ranking_performance(scoreDict,100)
 
 
 if __name__ == '__main__':
