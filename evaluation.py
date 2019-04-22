@@ -44,12 +44,17 @@ def ranking_performance(score_dict,k):
                     userIDCG[N-1] = userIDCG[N-2] + 1.0 / np.log2(N)
                 else:
                     userIDCG[N-1] = userIDCG[N-2]
+            # print(userIDCG[N-1])
+            # input()
             if DEBUG:
                 print("{score: " + str(score) + "; rel: " + str(rel) + "}")
         #input()
+#         print(userIDCG)
         avgPrec += userPrecision
         avgRecall += userRecall
         avgNDCG += (userDCG / userIDCG)
+        if np.isnan(avgNDCG).any():
+            print(userIDCG)
     avgPrec /= len(score_dict)
     avgRecall /= len(score_dict)
     avgNDCG /= len(score_dict)

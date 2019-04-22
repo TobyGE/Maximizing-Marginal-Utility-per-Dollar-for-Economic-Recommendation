@@ -38,7 +38,7 @@ def get_price(category):
     price = np.load(address)
     return price
 
-def read_related(category):
+def get_related(category):
     address = "./data/" + category + "/" + category + "_"
     with open(address + "related_index.json","r") as f:
         related = json.load(f)
@@ -51,27 +51,27 @@ def get_distribution(category):
 
 class TransactionData(Dataset):
     """docstring for TransactionData"""
-    def __init__(self, transctions, related, item_price, rating_distribution):
+    def __init__(self, transactions, related, item_price, rating_distribution):
         super(TransactionData, self).__init__()
-        self.transctions = transctions
+        self.transactions = np.array(transactions)
         self.related = related
-        self.L = len(transctions)
-        self.users = np.unique(np.array(transctions)[:,0])
+        self.L = len(transactions)
+        self.users = np.unique(self.transactions[:,0])
         self.userNum = len(self.users)
         self.itemNum = len(related)
         self.negNum = 2
         self.item_price = item_price
         self.rating_distribution = rating_distribution
-        self.userHist = [[] for i in range(self.userNum)]
-        for row in transctions:
-            self.userHist[row[0]].append(row[1])
+        self.userHist = dict()
+        for u in self.users:
+            self.userHist[u] = self.transactions[self.transactions[:,0] == u, 1:]
 
 
     def __len__(self):
         return self.L
 
     def __getitem__(self,idx):
-        row = self.transctions[idx]
+        row = self.transactions[idx]
         user = row[0]
         item = row[1]
         rating = row[2]
@@ -88,6 +88,10 @@ class TransactionData(Dataset):
                 "rating": torch.tensor(rating).to(torch.float), \
                 "negItem": torch.tensor(negItem).to(torch.long), \
                 "negPrice": torch.tensor(negPrice).to(torch.float)}
+
+    def get_avgRating(self):
+        avg_rating = np.mean(np.array(self.transactions)[:,2])
+        return torch.tensor(avg_rating).to(torch.float)
 
     def get_neg(self, userid, itemid):
         neg = self.related[str(itemid)]
@@ -115,24 +119,24 @@ class UserTransactionData(Dataset):
     """docstring for UserTransactionData"""
     def __init__(self, transactions, item_price, itemNum, trainHist):
         super(UserTransactionData, self).__init__()
-        self.transactions = transactions
-        self.user = np.unique(np.array(transactions)[:,0])
+        self.transactions = np.array(transactions)
+        self.user = np.unique(self.transactions[:,0])
         self.L = len(self.user)
         self.userNum = self.L
         self.itemNum = itemNum
         self.negNum = 1000
-        self.userHist = [[] for i in range(self.userNum)]
         self.trainHist = trainHist
         self.item_price = item_price
-        for row in transactions:
-            self.userHist[row[0]].append(row[1])
+        self.userHist = dict()
+        for u in self.user:
+            self.userHist[u] = self.transactions[self.transactions[:,0] == u, 1:]
 
     def __len__(self):
         return self.L
 
     def __getitem__(self, idx):
         user = self.user[idx]
-        posItem = self.userHist[idx]
+        posItem = self.userHist[idx][:,0]
         posPrice = []
         for i in posItem:
             posPrice.append(self.item_price[i])
@@ -149,7 +153,7 @@ class UserTransactionData(Dataset):
                 "negItem": torch.tensor(negItem).to(torch.long)}
 
     def get_neg(self, userId):
-        hist = self.userHist[userId] + self.trainHist[userId]
+        hist = np.concatenate((self.userHist[userId][:,0], self.trainHist[userId][:,0]),0)
         neg = []
         for i in range(self.negNum):
             while True:
@@ -172,12 +176,13 @@ class UserTransactionData(Dataset):
         return budget
 
 
-# if __name__ == '__main__':
-    # train_data, val_data, test_data = read_data("Baby")
-    # related = read_related("Baby")
-    # TrainTransaction = TransactionData(train_data, related)
-    # print(TrainTransaction[0])
-    # TestTransaction = UserTransactionData(test_data)
-    # print(TestTransaction[0])
-    # print(nn.Embedding(2,3)(torch.tensor(1)))
+if __name__ == '__main__':
+    train_data, val_data, test_data = read_data("Baby")
+    related = get_related("Baby")
+    price = get_price("Baby")
+    distribution = get_distribution("Baby")
+    Trainset = TransactionData(train_data, related, price, distribution)
+    # print(TrainTransaction.get_avgRating())
+    TestTransaction = UserTransactionData(test_data, price, Trainset.itemNum, Trainset.userHist)
+    print(TestTransaction.get_neg(0))
 
