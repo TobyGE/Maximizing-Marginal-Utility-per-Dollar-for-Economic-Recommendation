@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import evaluation
 import data_loader
 from model import MF, MUD
+import pdb
 
 def main(category):
     params = dict()
@@ -242,14 +243,14 @@ def main(category):
 
 def CF(category):
     params = dict()
-    params['lr'] = 1e-4
+    params['lr'] = 1e-2
     params['negNum_train'] = 3
     params["negNum_test"] = 1000
     params['epoch_limit'] = 3
-    params['w_decay'] = 1.5
+    params['w_decay'] = 1.
     params['batch_size'] = 128
     params['gpu'] = False
-    params['l_size'] = 50
+    params['l_size'] = 16
     params['epsilon'] = 0.01
 
     train, val, test = data_loader.read_data(category)
@@ -265,13 +266,13 @@ def CF(category):
     model = MF(userLen = trainset.userNum, itemLen = trainset.itemNum,\
             avg_rating = avg_rating, params = params)
     optimizer = opt.SGD(model.parameters(), lr = params['lr'], weight_decay = params['w_decay'])
-    criterion = nn.MSELoss(reduction = 'sum')
+    criterion = nn.MSELoss()
 
     trainset.set_negN(params['negNum_train'])
     trainLoader = DataLoader(trainset, batch_size = params['batch_size'], \
             shuffle = True, num_workers = 0)
     testset.set_negN(params["negNum_test"])
-    testLoader = DataLoader(testset, batch_size = 1, shuffle = True, num_workers = 0)
+    testLoader = DataLoader(testset, batch_size = 1, shuffle = False, num_workers = 4)
 
     runningLoss = []
     printLoss = []
@@ -296,8 +297,46 @@ def CF(category):
             optimizer.step()
             pbar.update(users.shape[0])
         pbar.close()
-    plt.plot(printLoss)
-    plt.show()
+        with torch.no_grad():
+            L = len(testLoader.dataset)
+            pbar = tqdm(total = L)
+            scoreDict = dict()
+            for i, batchData in enumerate(testLoader):
+                if i > 1000:
+                    break
+                user = torch.LongTensor(batchData['user']).to(model.device)
+                posItems = torch.LongTensor(batchData['posItem']).to(model.device)
+                negItems = torch.LongTensor(batchData['negItem']).to(model.device)
+                items = torch.cat((posItems, negItems),1).view(-1)
+                users = user.expand(items.shape[0])
+                out = model.forward(users,items)
+                # print("user: \n" + str(user))
+                # print("posItems: \n" + str(posItems))
+                # print("negItems: \n" + str(negItems))
+                # print("items: \n" + str(items))
+                # print("users: \n" + str(users))
+                # print("out: \n" + str(out))
+                # print("model: \n" + str(model.))
+                # input()
+                # pdb.set_trace()
+                scoreHeap = list()
+                for j in range(out.shape[0]):
+                    gt = False
+                    if j < posItems.shape[1]:
+                        gt = True
+                    # if prices[j] > budget:
+                    #     heappush(scoreHeap, (100, (0 + items[j].cpu().numpy(), gt)))
+                    # else:
+                    #     heappush(scoreHeap, (1 - out[j].cpu().numpy(), (0 + items[j].cpu().numpy(), gt)))
+                    heappush(scoreHeap, (1 - out[j].cpu().numpy(), (0 + items[j].cpu().numpy(), gt)))
+                scores = list()
+                candidate = len(scoreHeap)
+                for k in range(candidate):
+                    scores.append(heappop(scoreHeap))
+                pbar.update(1)
+                scoreDict[user[0]] = (scores, posItems.shape[1])
+            pbar.close()
+        testResult = evaluation.ranking_performance(scoreDict,10)
     with torch.no_grad():
         L = len(testLoader.dataset)
         pbar = tqdm(total = L)
@@ -308,7 +347,6 @@ def CF(category):
             negItems = torch.LongTensor(batchData['negItem']).to(model.device)
             items = torch.cat((posItems, negItems),1).view(-1)
             users = user.expand(items.shape[0])
-
             out = model.forward(users,items)
             scoreHeap = list()
             for j in range(out.shape[0]):

@@ -39,7 +39,9 @@ class MF(nn.Module):
         """
         self.globalBias = avg_rating.to(self.device)
         self.uBias = nn.Embedding(userLen,1).to(self.device)
+        self.uBias.weight.data = torch.zeros_like(self.uBias.weight.data)
         self.itemBias = nn.Embedding(itemLen,1).to(self.device)
+        self.itemBias.weight.data = torch.zeros_like(self.itemBias.weight.data)
         self.uEmbed = nn.Embedding(userLen, l_size).to(self.device)
         self.itemEmbed = nn.Embedding(itemLen, l_size).to(self.device)
         self.to(self.device)
@@ -49,8 +51,8 @@ class MF(nn.Module):
         uB = self.uBias(users)
         iE = self.itemEmbed(items)
         iB = self.itemBias(items)
-        gB = self.globalBias.expand(users.shape[0],1)
-        score = gB + uB + iB + torch.mul(uE, iE).sum(1).view(-1,1)
+        # gB = self.globalBias.expand(users.shape[0],1)
+        score = self.globalBias + uB + iB + torch.mul(uE, iE).sum(1).view(-1,1)
         return score
 
 class MUD(nn.Module):

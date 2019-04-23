@@ -57,6 +57,7 @@ class TransactionData(Dataset):
         self.related = related
         self.L = len(transactions)
         self.users = np.unique(self.transactions[:,0])
+        self.items = [int(k) for k in related.keys()]
         self.userNum = len(self.users)
         self.itemNum = len(related)
         self.negNum = 2
@@ -94,15 +95,16 @@ class TransactionData(Dataset):
         return torch.tensor(avg_rating).to(torch.float)
 
     def get_neg(self, userid, itemid):
+        # [related items]
         neg = self.related[str(itemid)]
-        hist = self.userHist[userid]
+        hist = self.userHist[userid][:,0]
         for k in neg:
             if k in hist:
                 neg.remove(k)
         if len(neg) < self.negNum:
             for i in range(self.negNum - len(neg)):
                 while True:
-                    negId = np.random.randint(self.itemNum)
+                    negId = self.items[np.random.randint(self.itemNum)]
                     if negId not in hist and negId not in neg:
                         neg.append(negId)
                         break
@@ -170,9 +172,11 @@ class UserTransactionData(Dataset):
 
     def get_budget(self, userId):
         price = []
-        for i in self.trainHist[userId]:
-            price = self.item_price[i]
-        budget = np.max(np.array(price))
+        budget = 0
+        for i in self.trainHist[userId][:,0]:
+            budget = max(budget, self.item_price[i])
+            # price.append(self.item_price[i])
+        # budget = np.max(np.array(price))
         return budget
 
 
@@ -184,5 +188,6 @@ if __name__ == '__main__':
     Trainset = TransactionData(train_data, related, price, distribution)
     # print(TrainTransaction.get_avgRating())
     TestTransaction = UserTransactionData(test_data, price, Trainset.itemNum, Trainset.userHist)
-    print(TestTransaction.get_neg(0))
+    # print(TrainTransaction.get_neg(0))
+    print(Trainset.get_neg(0,0))
 
