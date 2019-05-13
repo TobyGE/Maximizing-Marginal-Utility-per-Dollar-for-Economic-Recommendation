@@ -227,11 +227,11 @@ def main(category):
                 gt = False
                 if j < posItems.shape[1]:
                     gt = True
-                # if prices[j] > budget:
-                #     heappush(scoreHeap, (100, (0 + items[j].cpu().numpy(), gt)))
-                # else:
-                #     heappush(scoreHeap, (1 - out[j].cpu().numpy(), (0 + items[j].cpu().numpy(), gt)))
-                heappush(scoreHeap, (1 - out[j].cpu().numpy(), (0 + items[j].cpu().numpy(), gt)))
+                if prices[j] > budget:
+                    heappush(scoreHeap, (1000, (0 + items[j].cpu().numpy(), gt)))
+                else:
+                    heappush(scoreHeap, (1 - out[j].cpu().numpy(), (0 + items[j].cpu().numpy(), gt)))
+                # heappush(scoreHeap, (1 - out[j].cpu().numpy(), (0 + items[j].cpu().numpy(), gt)))
             scores = list()
             candidate = len(scoreHeap)
             for k in range(candidate):
