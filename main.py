@@ -25,6 +25,17 @@ def main(category):
     params['l_size'] = 100
     params['gpu']= False
 
+    params_cf = dict()
+    params_cf['lr'] = 5e-4
+    params_cf['batch_size'] = 128
+    params_cf['epoch_limit'] = 3
+    params_cf['w_decay'] = 1
+    params_cf['negNum_test'] = 1000
+    params_cf['epsilon'] = 1e-2
+    params_cf['negNum_train'] = 4
+    params_cf['l_size'] = 100
+    params_cf['gpu']= False
+
     train, val, test = data_loader.read_data(category)
     item_price = data_loader.get_price(category)
     item_related = data_loader.get_related(category)
@@ -37,7 +48,7 @@ def main(category):
                 trainset.itemNum, trainset.userHist)
 
     Rating = MF(userLen = trainset.userNum, itemLen = trainset.itemNum,\
-             params = params)
+             params = params_cf)
     optimizer_r = opt.SGD(Rating.parameters(), lr = params['lr'], \
             weight_decay = params['w_decay'])
 
@@ -158,50 +169,50 @@ def main(category):
         pbar.close()
 
         #validation
-#         print("Epoch " + str(epoch) + " validating...")
-#         L = len(valLoader.dataset)
-#         pbar = tqdm(total = L)
-#         model.eval()
-#         with torch.no_grad():
-#             scoreDict = dict()
-#             for i, batchData in enumerate(valLoader):
-#                 user = torch.LongTensor(batchData['user'])#.to(model.device)
-#                 posItems = torch.LongTensor(batchData['posItem'])#.to(model.device)
-#                 negItems = torch.LongTensor(batchData['negItem'])#.to(model.device)
-#                 budget = torch.FloatTensor(batchData['budget'])#.to(model.device)
-#                 posPrices = torch.FloatTensor(batchData['posPrice'])#.to(model.device)
-#                 negPrices = torch.FloatTensor(batchData['negPrice'])#.to(model.device)
+        print("Epoch " + str(epoch) + " validating...")
+        L = len(valLoader.dataset)
+        pbar = tqdm(total = L)
+        model.eval()
+        with torch.no_grad():
+            scoreDict = dict()
+            for i, batchData in enumerate(valLoader):
+                user = torch.LongTensor(batchData['user'])#.to(model.device)
+                posItems = torch.LongTensor(batchData['posItem'])#.to(model.device)
+                negItems = torch.LongTensor(batchData['negItem'])#.to(model.device)
+                budget = torch.FloatTensor(batchData['budget'])#.to(model.device)
+                posPrices = torch.FloatTensor(batchData['posPrice'])#.to(model.device)
+                negPrices = torch.FloatTensor(batchData['negPrice'])#.to(model.device)
 
-#                 items = torch.cat((posItems, negItems),1).view(-1)
-#                 prices = torch.cat((posPrices, negPrices),1).view(-1)
-#                 users = user.expand(items.shape[0])
+                items = torch.cat((posItems, negItems),1).view(-1)
+                prices = torch.cat((posPrices, negPrices),1).view(-1)
+                users = user.expand(items.shape[0])
 
-#                 out = model.forward(users,items)
-#                 scoreHeap = list()
-#                 for j in range(out.shape[0]):
-#                     gt = False
-#                     if j < posItems.shape[1]:
-#                         gt = True
-                    # if prices[j] > budget:
-                    #     heappush(scoreHeap, (100, (0 + items[j].cpu().numpy(), gt)))
-                    # else:
-                    #     heappush(scoreHeap, (1 - out[j].cpu().numpy(), (0 + items[j].cpu().numpy(), gt)))
-#                 scores = list()
-#                 candidate = len(scoreHeap)
-#                 for k in range(candidate):
-#                     scores.append(heappop(scoreHeap))
-#                 pbar.update(1)
-#                 scoreDict[user[0]] = (scores, posItems.shape[1])
-#         pbar.close()
+                out = model.forward(users,items)
+                scoreHeap = list()
+                for j in range(out.shape[0]):
+                    gt = False
+                    if j < posItems.shape[1]:
+                        gt = True
+                    if prices[j] > budget:
+                        heappush(scoreHeap, (100, (0 + items[j].cpu().numpy(), gt)))
+                    else:
+                        heappush(scoreHeap, (1 - out[j].cpu().numpy(), (0 + items[j].cpu().numpy(), gt)))
+                scores = list()
+                candidate = len(scoreHeap)
+                for k in range(candidate):
+                    scores.append(heappop(scoreHeap))
+                pbar.update(1)
+                scoreDict[user[0]] = (scores, posItems.shape[1])
+        pbar.close()
 
-#         valHistory.append(evaluation.ranking_performance(scoreDict,10))
-#         valError = 1 - valHistory[-1]["avg_ndcg"][0]
-#         valErrorList.append(valError)
-#         improvement = np.abs(error - valError)
-#         error = valError
-#         if improvement < epsilon:
-#             print("stop early")
-#             break
+        valHistory.append(evaluation.ranking_performance(scoreDict,10))
+        valError = 1 - valHistory[-1]["avg_ndcg"][0]
+        valErrorList.append(valError)
+        improvement = np.abs(error - valError)
+        error = valError
+        if improvement < epsilon:
+            print("stop early")
+            break
 
     # test
     print("starting test...")
@@ -246,7 +257,7 @@ def CF(category):
     params['lr'] = 1e-2
     params['negNum_train'] = 3
     params["negNum_test"] = 1000
-    params['epoch_limit'] = 3
+    params['epoch_limit'] = 10
     params['w_decay'] = 1.
     params['batch_size'] = 128
     params['gpu'] = False
@@ -257,12 +268,19 @@ def CF(category):
     item_price = data_loader.get_price(category)
     item_related = data_loader.get_related(category)
     distribution = data_loader.get_distribution(category)
+    print('Loading training, validation set...')
     trainset = data_loader.TransactionData(train, item_related, \
                 item_price, distribution)
+    valset = data_loader.UserTransactionData(val, item_price, \
+                trainset.itemNum, trainset.userHist)
+    print('Finish loading training and validation set.')
+    print('Loading Testing set...')
     testset = data_loader.UserTransactionData(test, item_price, \
                 trainset.itemNum, trainset.userHist)
+    print('Finish loading testing set.')
     avg_rating = trainset.get_avgRating()
 
+    print('Finish data loading, start model preparing...')
     model = MF(userLen = trainset.userNum, itemLen = trainset.itemNum,\
             avg_rating = avg_rating, params = params)
     optimizer = opt.SGD(model.parameters(), lr = params['lr'], weight_decay = params['w_decay'])
@@ -271,6 +289,10 @@ def CF(category):
     trainset.set_negN(params['negNum_train'])
     trainLoader = DataLoader(trainset, batch_size = params['batch_size'], \
             shuffle = True, num_workers = 0)
+
+    valset.set_negN(params["negNum_test"])
+    valLoader = DataLoader(valset, batch_size = 1, shuffle = False, num_workers = 4)
+
     testset.set_negN(params["negNum_test"])
     testLoader = DataLoader(testset, batch_size = 1, shuffle = False, num_workers = 4)
 
@@ -295,13 +317,15 @@ def CF(category):
                 printLoss.append(np.mean(np.array(runningLoss[-50:])))
             loss.backward()
             optimizer.step()
+            pbar.set_postfix({'loss' : '{0:1.5f}'.format(np.mean(np.array(runningLoss)))})
             pbar.update(users.shape[0])
         pbar.close()
+
         with torch.no_grad():
-            L = len(testLoader.dataset)
+            L = len(valLoader.dataset)
             pbar = tqdm(total = L)
             scoreDict = dict()
-            for i, batchData in enumerate(testLoader):
+            for i, batchData in enumerate(valLoader):
                 if i > 1000:
                     break
                 user = torch.LongTensor(batchData['user']).to(model.device)
@@ -336,7 +360,8 @@ def CF(category):
                 pbar.update(1)
                 scoreDict[user[0]] = (scores, posItems.shape[1])
             pbar.close()
-        testResult = evaluation.ranking_performance(scoreDict,10)
+        valResult = evaluation.ranking_performance(scoreDict,10)
+
     with torch.no_grad():
         L = len(testLoader.dataset)
         pbar = tqdm(total = L)
